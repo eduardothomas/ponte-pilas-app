@@ -60,8 +60,8 @@ jobs:
   ios:
     name: Build iOS (simulador)
     # Repo público: los minutos de macOS son gratis, pero el job es lento. Corre en PR, en main y a mano.
-    # El SDK de iOS de .NET pide Xcode 27; mientras los runners de GitHub no lo traigan se omite la validación de versión.
-    runs-on: macos-latest
+    # El SDK de iOS de .NET pide Xcode 27. Si el runner no lo trae, se omite la validación y el linker (solo para el build de simulador).
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
@@ -77,7 +77,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -version
-          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false 2>&1 | tee build.log \
+          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false -p:MtouchLink=None 2>&1 | tee build.log \
             || { grep -E "error|Xcode" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
   capturas:
