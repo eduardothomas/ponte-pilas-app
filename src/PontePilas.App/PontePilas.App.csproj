@@ -51,7 +51,7 @@
 
   <!-- Push en iOS: APNs. Requiere una cuenta de Apple Developer con la capacidad Push; activar con -p:HabilitarPush=true. -->
   <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) And '$(HabilitarPush)' == 'true'">
-    <CodesignEntitlements>Platforms\iOS\Entitlements.plist</CodesignEntitlements>
+    <CodesignEntitlements>Platforms\iOS\Entitlements.Push.plist</CodesignEntitlements>
   </PropertyGroup>
 
   <!-- URL de la API fijada al compilar: -p:ApiUrl=http://IP-DE-TU-MAC:5080/ -->
