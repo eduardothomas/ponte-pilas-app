@@ -60,7 +60,6 @@ jobs:
   ios:
     name: Build iOS (simulador)
     # Repo público: los minutos de macOS son gratis, pero el job es lento. Corre en PR, en main y a mano.
-    # El SDK de iOS de .NET pide Xcode 27. Si el runner no lo trae, se omite la validación y el linker (solo para el build de simulador).
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -70,15 +69,30 @@ jobs:
           global-json-file: global.json
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest
-      - name: Instalar workload de MAUI iOS
-        run: dotnet workload install maui-ios
+          xcode-version: latest-stable
+      - name: Instalar workload de MAUI iOS compatible con el Xcode del runner
+        # El workload más nuevo pide Xcode 27; los runners traen 26.x. Se elige el último conjunto de workloads con SDK de iOS 26.
+        run: |
+          set -o pipefail
+          ELEGIDA=""
+          for v in $(dotnet workload search version --take 30 2>/dev/null | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?' ); do
+            ios=$(dotnet workload search version "$v" 2>/dev/null | grep -i "microsoft.net.sdk.ios" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            echo "$v -> iOS $ios"
+            case "$ios" in 26.*) ELEGIDA=$v; break;; esac
+          done
+          if [ -n "$ELEGIDA" ]; then
+            echo "::notice::Workloads $ELEGIDA (SDK iOS 26) para Xcode $(xcodebuild -version | head -1)"
+            dotnet workload install maui-ios --version "$ELEGIDA"
+          else
+            echo "::warning::No se encontró un conjunto de workloads con iOS 26; se instala el último"
+            dotnet workload install maui-ios
+          fi
       - name: Build para simulador
         run: |
           set -o pipefail
           echo "::notice::Xcode instalados: $(ls /Applications | grep -i '^Xcode' | tr '\n' ' ')"
           echo "::notice::$(xcodebuild -version | tr '\n' ' ')"
-          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false -p:MtouchLink=None 2>&1 | tee build.log \
+          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 2>&1 | tee build.log \
             || { grep -E "error|Xcode" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
   capturas:
