@@ -26,7 +26,7 @@ public class MainActivity : MauiAppCompatActivity
 
     private void PrepararNotificaciones()
     {
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
         {
             var canal = new NotificationChannel(ServicioMensajes.Canal, "Recordatorios", NotificationImportance.High)
             {
@@ -35,7 +35,7 @@ public class MainActivity : MauiAppCompatActivity
             ((NotificationManager)GetSystemService(NotificationService)!).CreateNotificationChannel(canal);
         }
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu
+        if (OperatingSystem.IsAndroidVersionAtLeast(33)
             && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
         {
             RequestPermissions([Manifest.Permission.PostNotifications], 1);
