@@ -18,15 +18,18 @@ jobs:
       - name: Verificar configuración
         if: env.TOKEN_SWA == ''
         run: echo "::notice::Falta el secreto AZURE_STATIC_WEB_APPS_API_TOKEN; no se despliega."
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: env.TOKEN_SWA != ''
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         if: env.TOKEN_SWA != ''
         with:
           global-json-file: global.json
       - name: Configurar URL de la API
         if: env.TOKEN_SWA != ''
-        run: echo '{ "ApiUrl": "${{ vars.API_URL }}" }' > src/PontePilas.Web/wwwroot/appsettings.Production.json
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          printf '{ "ApiUrl": "%s" }\n' "$API_URL" > src/PontePilas.Web/wwwroot/appsettings.Production.json
       - name: Publicar
         if: env.TOKEN_SWA != ''
         run: dotnet publish src/PontePilas.Web -c Release -o publicado

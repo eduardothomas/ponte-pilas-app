@@ -2,7 +2,10 @@
 
   <!-- App móvil (.NET MAUI Blazor Hybrid) para Android e iOS. Reutiliza la UI de PontePilas.UI. -->
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
+    <!-- iOS solo se compila en macOS. Para una sola plataforma: -p:Plataforma=android o -p:Plataforma=ios -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks Condition="'$(Plataforma)' != ''">net10.0-$(Plataforma)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>PontePilas.App</RootNamespace>
     <UseMaui>true</UseMaui>
