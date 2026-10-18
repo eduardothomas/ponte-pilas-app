@@ -13,8 +13,10 @@ public class ServicioMensajes : FirebaseMessagingService
 {
     public const string Canal = "recordatorios";
 
+#pragma warning disable CS0672 // El binding lo marca obsoleto, pero sigue siendo el aviso de token nuevo de Firebase.
     public override void OnNewToken(string token) =>
         _ = RegistroPush.RegistrarAsync(token, PlataformaDispositivo.Android);
+#pragma warning restore CS0672
 
     /// <summary>Con la app abierta, Android no muestra la notificación solo: la mostramos aquí.</summary>
     public override void OnMessageReceived(RemoteMessage mensaje)
