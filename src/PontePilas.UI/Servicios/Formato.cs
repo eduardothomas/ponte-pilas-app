@@ -8,7 +8,7 @@ public static class Formato
 {
     public static readonly CultureInfo Es = CultureInfo.GetCultureInfo("es-PA");
 
-    public static string Hora(TimeOnly hora) => hora.ToString("h:mm tt", Es).Replace(". ", "").Replace(".", "");
+    public static string Hora(TimeOnly hora) => hora.ToString("h:mm tt", Es);
 
     public static string FechaCorta(DateOnly fecha, DateOnly hoy) => (fecha.DayNumber - hoy.DayNumber) switch
     {
