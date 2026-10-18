@@ -50,7 +50,7 @@ jobs:
           set -o pipefail
           dotnet publish src/PontePilas.App -p:Plataforma=android -f net10.0-android -c Release \
             -p:AndroidPackageFormats=apk -p:AndroidKeyStore=false -o publicado/android 2>&1 | tee build.log \
-            || { grep -E "error" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
+            || { grep -E "error|Error|defined multiple|Duplicate" build.log | grep -vE "^\s*at |\sat (com|java|kotlin)\.|\.\.\. [0-9]+ more" | awk '!v[$0]++' | head -25 | sed 's/^/::error::/'; exit 1; }
       - uses: actions/upload-artifact@v5
         with:
           name: android-apk
@@ -93,7 +93,7 @@ jobs:
           echo "::notice::Xcode instalados: $(ls /Applications | grep -i '^Xcode' | tr '\n' ' ')"
           echo "::notice::$(xcodebuild -version | tr '\n' ' ')"
           dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 2>&1 | tee build.log \
-            || { grep -E "error|Xcode" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
+            || { grep -E "error|Xcode" build.log | grep -vE "^\s*at " | awk '!v[$0]++' | head -25 | sed 's/^/::error::/'; exit 1; }
 
   capturas:
     name: Capturas visuales (escritorio y móvil)
