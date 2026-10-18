@@ -21,6 +21,25 @@ App Android (emulador o teléfono conectado):
 dotnet build src/PontePilas.App -p:Plataforma=android -f net10.0-android -t:Run
 ```
 
+### En tu iPhone (desde una Mac)
+
+Requisitos: Xcode instalado y abierto una vez, `dotnet workload install maui-ios`, el iPhone conectado por cable con el **Modo desarrollador** activado (Ajustes → Privacidad y seguridad) y tu Apple ID agregado en Xcode (Settings → Accounts). Con un Apple ID gratis la app dura 7 días en el teléfono; con Apple Developer ($99/año), un año.
+
+1. Levanta la API escuchando en la red local (en el repo `ponte-pilas-api`):
+   ```bash
+   dotnet run --project src/PontePilas.Api --urls http://0.0.0.0:5080
+   ```
+2. Busca la IP de tu Mac: `ipconfig getifaddr en0` (el iPhone debe estar en el mismo Wi‑Fi).
+3. Compila e instala en el iPhone, cambiando la IP:
+   ```bash
+   dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug \
+     -p:RuntimeIdentifier=ios-arm64 -p:ApiUrl=http://192.168.1.50:5080/ \
+     -p:CodesignKey="Apple Development" -t:Run
+   ```
+4. La primera vez, en el iPhone: Ajustes → General → VPN y gestión de dispositivos → confía en tu certificado de desarrollador.
+
+Para el simulador basta con: `dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -t:Run`.
+
 ## Accesos
 
 | Qué | Enlace | Se actualiza |
