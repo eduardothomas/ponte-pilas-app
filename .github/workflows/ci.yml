@@ -46,9 +46,11 @@ jobs:
       - name: Instalar workload de MAUI Android
         run: dotnet workload install maui-android
       - name: Build APK
-        run: >
-          dotnet publish src/PontePilas.App -p:Plataforma=android -f net10.0-android -c Release
-          -p:AndroidPackageFormats=apk -p:AndroidKeyStore=false -o publicado/android
+        run: |
+          set -o pipefail
+          dotnet publish src/PontePilas.App -p:Plataforma=android -f net10.0-android -c Release \
+            -p:AndroidPackageFormats=apk -p:AndroidKeyStore=false -o publicado/android 2>&1 | tee build.log \
+            || { grep -E "error" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
       - uses: actions/upload-artifact@v5
         with:
           name: android-apk
@@ -65,10 +67,17 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - name: Instalar workload de MAUI iOS
         run: dotnet workload install maui-ios
       - name: Build para simulador
-        run: dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 2>&1 | tee build.log \
+            || { grep -E "error|Xcode" build.log | sort -u | head -20 | sed 's/^/::error::/'; exit 1; }
 
   capturas:
     name: Capturas visuales (escritorio y móvil)
