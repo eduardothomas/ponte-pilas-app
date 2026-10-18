@@ -69,3 +69,53 @@ jobs:
         run: dotnet workload install maui-ios
       - name: Build para simulador
         run: dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64
+
+  capturas:
+    name: Capturas visuales (escritorio y móvil)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: pruebas-y-web
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Publicar web
+        run: dotnet publish src/PontePilas.Web -c Release -o publicado/web
+      - name: Instalar Playwright
+        working-directory: tests/visual
+        run: |
+          npm init -y > /dev/null
+          npm install playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Tomar capturas
+        working-directory: tests/visual
+        run: |
+          python3 servidor.py ../../publicado/web/wwwroot &
+          for i in $(seq 1 30); do curl -sf http://localhost:5173 > /dev/null && break; sleep 1; done
+          node capturas.mjs ../../capturas
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: capturas
+          path: capturas
+          retention-days: 14
+      - name: Publicar capturas en la rama "capturas"
+        # Permite revisar las capturas desde git (por ejemplo, desde sesiones sin acceso a artefactos).
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          RAMA_PR: ${{ github.head_ref }}
+        run: |
+          cd capturas
+          git init -q -b capturas
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          printf '# Capturas de %s\n\nCommit %s\n' "$RAMA_PR" "$GITHUB_SHA" > README.md
+          git add -A
+          git commit -q -m "Capturas de $RAMA_PR ($GITHUB_SHA)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" capturas
