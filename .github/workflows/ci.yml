@@ -4,9 +4,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  pruebas-y-build:
+  pruebas-y-web:
+    name: Pruebas y build web
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -14,6 +20,52 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - run: dotnet restore PontePilas.slnx
-      - run: dotnet build PontePilas.slnx --no-restore -c Release
-      - run: dotnet test PontePilas.slnx --no-build -c Release --logger "console;verbosity=normal"
+      - name: Pruebas
+        run: dotnet test tests/PontePilas.Shared.Tests -c Release --logger "console;verbosity=normal"
+      - name: Publicar web
+        run: dotnet publish src/PontePilas.Web -c Release -o publicado/web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: publicado/web/wwwroot
+          retention-days: 7
+
+  android:
+    name: Build Android (APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: 17
+      - name: Instalar workload de MAUI Android
+        run: dotnet workload install maui-android
+      - name: Build APK
+        run: >
+          dotnet publish src/PontePilas.App -f net10.0-android -c Release
+          -p:AndroidPackageFormats=apk -p:AndroidKeyStore=false -o publicado/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: publicado/android/*.apk
+          retention-days: 14
+
+  ios:
+    name: Build iOS (simulador)
+    # Repo público: los minutos de macOS son gratis, pero el job es lento. Corre en PR, en main y a mano.
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Instalar workload de MAUI iOS
+        run: dotnet workload install maui-ios
+      - name: Build para simulador
+        run: dotnet build src/PontePilas.App -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64

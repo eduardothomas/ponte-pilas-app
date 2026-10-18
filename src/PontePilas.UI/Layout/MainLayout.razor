@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<div class="pp-app">
+    <header class="pp-barra">
+        <a class="pp-marca" href="">
+            <span class="pp-pila" aria-hidden="true"><span></span></span>
+            Ponte Pilas
+        </a>
+        <nav class="pp-nav">
+            <NavLink href="" Match="NavLinkMatch.All">Hoy</NavLink>
+            <NavLink href="calendario">Calendario</NavLink>
+        </nav>
+    </header>
+
+    <main class="pp-contenido">
+        @Body
+    </main>
+
+    <a class="pp-fab" href="tarea/nueva" aria-label="Nueva tarea">+</a>
+</div>

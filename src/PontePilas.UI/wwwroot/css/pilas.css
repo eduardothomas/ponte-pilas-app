@@ -1,0 +1,236 @@
+/* Ponte Pilas — estilos compartidos (web y app). */
+:root {
+    --pp-fondo: #f6f4ef;
+    --pp-superficie: #ffffff;
+    --pp-tinta: #1d1b18;
+    --pp-tenue: #6b665e;
+    --pp-borde: #e3dfd6;
+    --pp-acento: #f2b705;
+    --pp-acento-tinta: #1d1b18;
+    --pp-baja: #8a9a5b;
+    --pp-normal: #5b7fa6;
+    --pp-alta: #e07a1f;
+    --pp-urgente: #d23b3b;
+    --pp-radio: 14px;
+    --pp-sombra: 0 1px 2px rgb(0 0 0 / 6%), 0 4px 16px rgb(0 0 0 / 5%);
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --pp-fondo: #151412;
+        --pp-superficie: #1f1d1a;
+        --pp-tinta: #f1ede6;
+        --pp-tenue: #a39d93;
+        --pp-borde: #34312c;
+        --pp-sombra: none;
+        color-scheme: dark;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    background: var(--pp-fondo);
+    color: var(--pp-tinta);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Estructura */
+.pp-app { min-height: 100vh; padding-bottom: 96px; }
+
+.pp-barra {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background: color-mix(in srgb, var(--pp-fondo) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--pp-borde);
+}
+
+.pp-marca {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; letter-spacing: -0.02em; text-decoration: none; font-size: 1.1rem;
+}
+
+.pp-pila {
+    position: relative; width: 26px; height: 14px;
+    border: 2px solid var(--pp-tinta); border-radius: 4px;
+}
+.pp-pila::after {
+    content: ""; position: absolute; right: -5px; top: 3px;
+    width: 3px; height: 4px; background: var(--pp-tinta); border-radius: 0 2px 2px 0;
+}
+.pp-pila span {
+    position: absolute; inset: 2px; right: 40%;
+    background: var(--pp-acento); border-radius: 1px;
+}
+
+.pp-nav { display: flex; gap: 4px; }
+.pp-nav a {
+    padding: 6px 12px; border-radius: 999px; text-decoration: none; color: var(--pp-tenue); font-weight: 600;
+}
+.pp-nav a.active { background: var(--pp-tinta); color: var(--pp-fondo); }
+
+.pp-contenido { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+h1 { font-size: 1.6rem; letter-spacing: -0.02em; margin: 8px 0 16px; }
+h1:focus { outline: none; }
+h2 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pp-tenue); margin: 24px 0 8px;
+}
+
+.pp-contador {
+    font-size: 0.75rem; background: var(--pp-borde); color: var(--pp-tinta);
+    border-radius: 999px; padding: 0 8px;
+}
+.seccion-atrasadas h2 { color: var(--pp-urgente); }
+
+.vacio { color: var(--pp-tenue); text-align: center; padding: 32px 0; }
+.vacio .pp-boton { margin-top: 8px; }
+
+/* Lista de tareas */
+.pp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.pp-tarea {
+    --color-prioridad: var(--pp-normal);
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; background: var(--pp-superficie);
+    border: 1px solid var(--pp-borde); border-left: 4px solid var(--color-prioridad);
+    border-radius: var(--pp-radio); box-shadow: var(--pp-sombra);
+}
+.prioridad-baja { --color-prioridad: var(--pp-baja); }
+.prioridad-normal { --color-prioridad: var(--pp-normal); }
+.prioridad-alta { --color-prioridad: var(--pp-alta); }
+.prioridad-urgente { --color-prioridad: var(--pp-urgente); }
+
+.pp-check {
+    flex: none; width: 24px; height: 24px; margin-top: 1px;
+    border: 2px solid var(--color-prioridad); border-radius: 50%;
+    background: transparent; color: var(--pp-superficie); font-weight: 800; cursor: pointer;
+    display: grid; place-items: center; padding: 0;
+}
+.pp-check:hover { background: color-mix(in srgb, var(--color-prioridad) 20%, transparent); }
+.pp-tarea.hecha .pp-check { background: var(--color-prioridad); }
+.pp-tarea.hecha .pp-titulo { text-decoration: line-through; color: var(--pp-tenue); }
+
+.pp-tarea-cuerpo { flex: 1; min-width: 0; text-decoration: none; display: grid; gap: 2px; }
+.pp-titulo { font-weight: 600; overflow-wrap: anywhere; }
+.pp-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.82rem; color: var(--pp-tenue); }
+
+.pp-chip {
+    background: var(--color-prioridad); color: #fff; border-radius: 999px;
+    padding: 0 8px; font-weight: 700; font-size: 0.72rem; line-height: 1.6;
+}
+
+/* Calendario */
+.pp-cal-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pp-cal-cabecera h1 { margin: 8px 0; text-align: center; flex: 1; }
+
+.pp-cal {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    background: var(--pp-superficie); border: 1px solid var(--pp-borde);
+    border-radius: var(--pp-radio); padding: 8px; box-shadow: var(--pp-sombra);
+}
+.pp-cal-nombre { text-align: center; font-size: 0.75rem; color: var(--pp-tenue); font-weight: 700; padding: 4px 0; }
+
+.pp-cal-dia {
+    aspect-ratio: 1; min-height: 40px; border: 0; border-radius: 10px; background: transparent;
+    color: inherit; font: inherit; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+}
+.pp-cal-dia:hover { background: var(--pp-fondo); }
+.pp-cal-dia.fuera { color: var(--pp-tenue); opacity: 0.5; }
+.pp-cal-dia.hoy .num {
+    background: var(--pp-acento); color: var(--pp-acento-tinta);
+    border-radius: 999px; padding: 0 7px; font-weight: 800;
+}
+.pp-cal-dia.sel { outline: 2px solid var(--pp-tinta); }
+.pp-cal-dia .puntos { display: flex; gap: 3px; height: 6px; }
+.punto { width: 6px; height: 6px; border-radius: 50%; background: var(--color-prioridad); }
+.punto.hecha { opacity: 0.35; }
+
+/* Formulario */
+.pp-form { display: grid; gap: 16px; }
+.pp-form label, .pp-form legend { display: grid; gap: 6px; font-weight: 600; font-size: 0.9rem; }
+.pp-form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.pp-form fieldset:disabled { opacity: 0.5; }
+.pp-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+input, select, textarea {
+    font: inherit; color: inherit; width: 100%;
+    background: var(--pp-superficie); border: 1px solid var(--pp-borde);
+    border-radius: 10px; padding: 10px 12px; min-height: 44px;
+}
+input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--pp-acento); outline-offset: 2px;
+}
+
+.pp-segmentado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pp-segmentado button {
+    font: inherit; font-weight: 600; min-height: 40px; cursor: pointer;
+    border: 1px solid var(--pp-borde); border-radius: 10px;
+    background: var(--pp-superficie); color: inherit;
+}
+.pp-segmentado button.activo { background: var(--color-prioridad); border-color: var(--color-prioridad); color: #fff; }
+
+.pp-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.pp-form .pp-opcion {
+    display: flex; align-items: center; gap: 8px; font-weight: 500;
+    border: 1px solid var(--pp-borde); border-radius: 999px; padding: 6px 12px;
+    background: var(--pp-superficie);
+}
+.pp-opcion input { width: auto; min-height: 0; }
+
+.pp-ayuda { margin: 0; font-size: 0.82rem; color: var(--pp-tenue); font-weight: 400; }
+.pp-mensaje { color: var(--pp-urgente); font-size: 0.82rem; font-weight: 500; }
+
+.pp-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pp-boton {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 18px; border-radius: 12px; border: 0; cursor: pointer;
+    font: inherit; font-weight: 700; text-decoration: none;
+    background: var(--pp-acento); color: var(--pp-acento-tinta);
+}
+.pp-boton:disabled { opacity: 0.6; cursor: default; }
+.pp-boton.secundario { background: var(--pp-superficie); color: var(--pp-tinta); border: 1px solid var(--pp-borde); }
+.pp-boton.peligro { background: transparent; color: var(--pp-urgente); margin-left: auto; }
+.pp-seccion .pp-boton { margin-top: 12px; }
+
+.pp-enlace {
+    justify-self: start; background: none; border: 0; padding: 0; font: inherit;
+    color: var(--pp-tenue); text-decoration: underline; cursor: pointer; font-size: 0.85rem;
+}
+
+.pp-error {
+    display: grid; gap: 8px; padding: 12px 14px; border-radius: var(--pp-radio);
+    background: color-mix(in srgb, var(--pp-urgente) 12%, var(--pp-superficie));
+    border: 1px solid color-mix(in srgb, var(--pp-urgente) 40%, transparent);
+}
+
+.pp-fab {
+    position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 60px; height: 60px; border-radius: 50%;
+    display: grid; place-items: center; text-decoration: none;
+    background: var(--pp-acento); color: var(--pp-acento-tinta);
+    font-size: 2rem; font-weight: 400; line-height: 1;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 22%);
+}
+
+@media (max-width: 420px) {
+    .pp-fila { grid-template-columns: 1fr; }
+    .pp-cal { padding: 4px; gap: 2px; }
+}

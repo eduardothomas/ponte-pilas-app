@@ -1,0 +1,82 @@
+@page "/"
+@inject ITareasCliente Tareas
+
+<PageTitle>Hoy · Ponte Pilas</PageTitle>
+
+<h1>@Formato.FechaCorta(hoy, hoy), @hoy.ToString("d 'de' MMMM", Formato.Es)</h1>
+
+<EstadoCarga Cargando="cargando" Error="@error" AlReintentar="CargarAsync">
+    @if (secciones.Count == 0)
+    {
+        <div class="vacio">
+            <p>No tienes nada pendiente. 🎉</p>
+            <a class="pp-boton" href="tarea/nueva">Agregar una tarea</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var seccion in secciones)
+        {
+            <section class="pp-seccion seccion-@seccion.Tipo.ToString().ToLowerInvariant()">
+                <h2>@seccion.Titulo <span class="pp-contador">@seccion.Tareas.Count</span></h2>
+                <ul class="pp-lista">
+                    @foreach (var tarea in seccion.Tareas)
+                    {
+                        <TareaItem @key="tarea.Id" Tarea="tarea" Hoy="hoy"
+                                   MostrarFecha="seccion.Tipo is not (TipoSeccion.Hoy or TipoSeccion.Manana)"
+                                   Ocupado="ocupadas.Contains(tarea.Id)" AlCambiarEstado="CompletarAsync" />
+                    }
+                </ul>
+            </section>
+        }
+    }
+</EstadoCarga>
+
+@code {
+    private readonly DateOnly hoy = DateOnly.FromDateTime(DateTime.Now);
+    private readonly HashSet<Guid> ocupadas = [];
+    private List<TareaDto> tareas = [];
+    private IReadOnlyList<SeccionAgenda> secciones = [];
+    private bool cargando = true;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            tareas = [.. await Tareas.ListarAsync()];
+            secciones = AgendaBuilder.Construir(tareas, hoy);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CompletarAsync(TareaDto tarea)
+    {
+        ocupadas.Add(tarea.Id);
+        try
+        {
+            var actualizada = await Tareas.CompletarAsync(tarea.Id);
+            tareas = tareas.Select(t => t.Id == tarea.Id ? actualizada : t).ToList();
+            secciones = AgendaBuilder.Construir(tareas, hoy);
+        }
+        catch (HttpRequestException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            ocupadas.Remove(tarea.Id);
+        }
+    }
+}

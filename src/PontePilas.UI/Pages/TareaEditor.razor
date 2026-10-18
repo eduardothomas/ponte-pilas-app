@@ -1,0 +1,230 @@
+@page "/tarea/nueva"
+@page "/tarea/{Id:guid}"
+@inject ITareasCliente Tareas
+@inject NavigationManager Nav
+
+<PageTitle>@(Id is null ? "Nueva tarea" : "Editar tarea") · Ponte Pilas</PageTitle>
+
+<h1>@(Id is null ? "Nueva tarea" : "Editar tarea")</h1>
+
+<EstadoCarga Cargando="cargando" Error="@errorCarga">
+    <form class="pp-form" @onsubmit="GuardarAsync">
+        <label>
+            ¿Qué tienes que hacer?
+            <input @bind="titulo" @bind:event="oninput" placeholder="Ej.: Pagar la tarjeta" maxlength="@ValidadorTarea.LargoMaximoTitulo" autofocus />
+            <Mensaje Campo="Titulo" Errores="errores" />
+        </label>
+
+        <div class="pp-fila">
+            <label>
+                Fecha
+                <input type="date" @bind="fecha" />
+            </label>
+            <label>
+                Hora
+                <input type="time" @bind="hora" disabled="@(fecha is null)" />
+                <Mensaje Campo="Hora" Errores="errores" />
+            </label>
+        </div>
+        @if (fecha is not null)
+        {
+            <button type="button" class="pp-enlace" @onclick="QuitarFecha">Quitar fecha (algún día)</button>
+        }
+
+        <fieldset>
+            <legend>Prioridad</legend>
+            <div class="pp-segmentado">
+                @foreach (var p in Enum.GetValues<Prioridad>())
+                {
+                    <button type="button" class="prioridad-@p.ToString().ToLowerInvariant() @(prioridad == p ? "activo" : "")"
+                            aria-pressed="@(prioridad == p)" @onclick="() => prioridad = p">@Formato.Prioridad(p)</button>
+                }
+            </div>
+            <p class="pp-ayuda">@AyudaPrioridad(prioridad)</p>
+        </fieldset>
+
+        <label>
+            Repetir
+            <select @bind="repeticion" disabled="@(fecha is null)">
+                @foreach (var r in Enum.GetValues<Repeticion>())
+                {
+                    <option value="@r">@Formato.Repeticion(r)</option>
+                }
+            </select>
+            <Mensaje Campo="Repeticion" Errores="errores" />
+        </label>
+
+        <fieldset disabled="@(fecha is null)">
+            <legend>Recordarme</legend>
+            <div class="pp-opciones">
+                @foreach (var minutos in opcionesAviso)
+                {
+                    <label class="pp-opcion">
+                        <input type="checkbox" checked="@avisos.Contains(minutos)" @onchange="e => CambiarAviso(minutos, (bool)e.Value!)" />
+                        @Formato.Aviso(minutos)
+                    </label>
+                }
+            </div>
+            @if (fecha is not null && hora is null && avisos.Count > 0)
+            {
+                <p class="pp-ayuda">Sin hora, se toma como referencia las 8:00 a. m.</p>
+            }
+            <Mensaje Campo="AvisosMinutosAntes" Errores="errores" />
+        </fieldset>
+
+        <label>
+            Notas
+            <textarea @bind="notas" rows="3" maxlength="@ValidadorTarea.LargoMaximoNotas"></textarea>
+        </label>
+
+        @if (errorGuardar is not null)
+        {
+            <p class="pp-error" role="alert">@errorGuardar</p>
+        }
+
+        <div class="pp-acciones">
+            <button type="submit" class="pp-boton" disabled="@guardando">@(guardando ? "Guardando…" : "Guardar")</button>
+            <a class="pp-boton secundario" href="">Cancelar</a>
+            @if (Id is not null)
+            {
+                <button type="button" class="pp-boton peligro" disabled="@guardando" @onclick="EliminarAsync">Eliminar</button>
+            }
+        </div>
+    </form>
+</EstadoCarga>
+
+@code {
+    private static readonly int[] opcionesAviso = [0, 15, 60, 1440];
+
+    [Parameter] public Guid? Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "fecha")] public string? FechaInicial { get; set; }
+
+    private string titulo = "";
+    private string? notas;
+    private DateOnly? fecha;
+    private TimeOnly? hora;
+    private Prioridad prioridad = Prioridad.Normal;
+    private Repeticion repeticion = Repeticion.Ninguna;
+    private List<int> avisos = [0];
+    private IReadOnlyDictionary<string, string> errores = new Dictionary<string, string>();
+    private bool cargando;
+    private bool guardando;
+    private string? errorCarga;
+    private string? errorGuardar;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is not { } id)
+        {
+            fecha = DateOnly.TryParseExact(FechaInicial, "yyyy-MM-dd", out var f) ? f : DateOnly.FromDateTime(DateTime.Now);
+            return;
+        }
+
+        cargando = true;
+        try
+        {
+            var tarea = await Tareas.ObtenerAsync(id);
+            if (tarea is null)
+            {
+                errorCarga = "La tarea ya no existe.";
+                return;
+            }
+
+            (titulo, notas, fecha, hora, prioridad, repeticion, avisos) =
+                (tarea.Titulo, tarea.Notas, tarea.Fecha, tarea.Hora, tarea.Prioridad, tarea.Repeticion, [.. tarea.AvisosMinutosAntes]);
+        }
+        catch (HttpRequestException ex)
+        {
+            errorCarga = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void QuitarFecha()
+    {
+        fecha = null;
+        hora = null;
+        repeticion = Repeticion.Ninguna;
+        avisos.Clear();
+    }
+
+    private void CambiarAviso(int minutos, bool activo)
+    {
+        if (activo && !avisos.Contains(minutos))
+        {
+            avisos.Add(minutos);
+        }
+        else if (!activo)
+        {
+            avisos.Remove(minutos);
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        var request = ValidadorTarea.Normalizar(new GuardarTareaRequest(
+            titulo, notas, fecha, fecha is null ? null : hora, prioridad,
+            fecha is null ? Repeticion.Ninguna : repeticion,
+            fecha is null ? [] : avisos));
+
+        errores = ValidadorTarea.Validar(request);
+        if (errores.Count > 0)
+        {
+            return;
+        }
+
+        guardando = true;
+        errorGuardar = null;
+        try
+        {
+            if (Id is { } id)
+            {
+                await Tareas.ActualizarAsync(id, request);
+            }
+            else
+            {
+                await Tareas.CrearAsync(request);
+            }
+
+            Nav.NavigateTo("");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorGuardar = $"No se pudo guardar: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task EliminarAsync()
+    {
+        guardando = true;
+        try
+        {
+            await Tareas.EliminarAsync(Id!.Value);
+            Nav.NavigateTo("");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorGuardar = $"No se pudo eliminar: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private static string AyudaPrioridad(Prioridad p) => p switch
+    {
+        Prioridad.Baja => "Solo una notificación en tus dispositivos.",
+        Prioridad.Normal => "Notificación, y correo si sigue pendiente.",
+        Prioridad.Alta => "Notificación y correo; WhatsApp si no la marcas como hecha.",
+        _ => "Te insistimos por WhatsApp hasta que la marques como hecha.",
+    };
+}

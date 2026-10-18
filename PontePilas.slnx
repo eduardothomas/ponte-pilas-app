@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/PontePilas.Shared/PontePilas.Shared.csproj" />
+    <Project Path="src/PontePilas.UI/PontePilas.UI.csproj" />
+    <Project Path="src/PontePilas.Web/PontePilas.Web.csproj" />
+    <Project Path="src/PontePilas.App/PontePilas.App.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PontePilas.Shared.Tests/PontePilas.Shared.Tests.csproj" />

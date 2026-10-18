@@ -1,0 +1,134 @@
+@page "/calendario"
+@inject ITareasCliente Tareas
+
+<PageTitle>Calendario · Ponte Pilas</PageTitle>
+
+<div class="pp-cal-cabecera">
+    <button type="button" class="pp-boton secundario" aria-label="Mes anterior" @onclick="() => CambiarMes(-1)">‹</button>
+    <h1>@Formato.Mes(mes.Year, mes.Month)</h1>
+    <button type="button" class="pp-boton secundario" aria-label="Mes siguiente" @onclick="() => CambiarMes(1)">›</button>
+</div>
+
+<EstadoCarga Cargando="cargando" Error="@error" AlReintentar="CargarAsync">
+    <div class="pp-cal" role="grid">
+        @foreach (var nombre in nombresDias)
+        {
+            <div class="pp-cal-nombre" role="columnheader">@nombre</div>
+        }
+        @foreach (var semana in semanas)
+        {
+            @foreach (var dia in semana)
+            {
+                var pendientes = dia.Tareas.Count(t => !t.Completada);
+                <button type="button" role="gridcell"
+                        class="pp-cal-dia @(dia.EsDelMes ? "" : "fuera") @(dia.Fecha == hoy ? "hoy" : "") @(dia.Fecha == seleccionado ? "sel" : "")"
+                        @onclick="() => seleccionado = dia.Fecha">
+                    <span class="num">@dia.Fecha.Day</span>
+                    @if (dia.Tareas.Count > 0)
+                    {
+                        <span class="puntos">
+                            @foreach (var t in dia.Tareas.Take(3))
+                            {
+                                <i class="punto prioridad-@t.Prioridad.ToString().ToLowerInvariant() @(t.Completada ? "hecha" : "")"></i>
+                            }
+                        </span>
+                        @if (pendientes > 0)
+                        {
+                            <span class="sr-only">@pendientes pendientes</span>
+                        }
+                    }
+                </button>
+            }
+        }
+    </div>
+
+    <section class="pp-seccion">
+        <h2>@Formato.FechaCorta(seleccionado, hoy)</h2>
+        @{
+            var delDia = semanas.SelectMany(s => s).FirstOrDefault(d => d.Fecha == seleccionado)?.Tareas ?? [];
+        }
+        @if (delDia.Count == 0)
+        {
+            <p class="vacio">Nada para este día.</p>
+        }
+        else
+        {
+            <ul class="pp-lista">
+                @foreach (var tarea in delDia)
+                {
+                    <TareaItem @key="(tarea.Id, tarea.Fecha)" Tarea="tarea" Hoy="hoy" MostrarFecha="false"
+                               Ocupado="ocupadas.Contains(tarea.Id)" AlCambiarEstado="CambiarEstadoAsync" />
+                }
+            </ul>
+        }
+        <a class="pp-boton" href="tarea/nueva?fecha=@seleccionado.ToString("yyyy-MM-dd")">+ Tarea para este día</a>
+    </section>
+</EstadoCarga>
+
+@code {
+    private static readonly string[] nombresDias = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+    private readonly DateOnly hoy = DateOnly.FromDateTime(DateTime.Now);
+    private readonly HashSet<Guid> ocupadas = [];
+    private DateOnly mes;
+    private DateOnly seleccionado;
+    private List<TareaDto> tareas = [];
+    private IReadOnlyList<IReadOnlyList<DiaCalendario>> semanas = [];
+    private bool cargando = true;
+    private string? error;
+
+    protected override Task OnInitializedAsync()
+    {
+        mes = new DateOnly(hoy.Year, hoy.Month, 1);
+        seleccionado = hoy;
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            tareas = [.. await Tareas.ListarAsync(incluirCompletadas: true)];
+            Recalcular();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void CambiarMes(int delta)
+    {
+        mes = mes.AddMonths(delta);
+        seleccionado = mes.Year == hoy.Year && mes.Month == hoy.Month ? hoy : mes;
+        Recalcular();
+    }
+
+    private void Recalcular() => semanas = MesCalendario.Construir(mes.Year, mes.Month, tareas);
+
+    private async Task CambiarEstadoAsync(TareaDto tarea)
+    {
+        ocupadas.Add(tarea.Id);
+        try
+        {
+            var actualizada = tarea.Completada
+                ? await Tareas.ReabrirAsync(tarea.Id)
+                : await Tareas.CompletarAsync(tarea.Id);
+            tareas = tareas.Select(t => t.Id == tarea.Id ? actualizada : t).ToList();
+            Recalcular();
+        }
+        catch (HttpRequestException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            ocupadas.Remove(tarea.Id);
+        }
+    }
+}

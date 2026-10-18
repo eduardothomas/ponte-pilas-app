@@ -1,0 +1,29 @@
+@if (Error is not null)
+{
+    <div class="pp-error" role="alert">
+        <strong>No pudimos conectar con el servidor.</strong>
+        <span>@Error</span>
+        @if (AlReintentar.HasDelegate)
+        {
+            <button type="button" class="pp-boton secundario" @onclick="AlReintentar">Reintentar</button>
+        }
+    </div>
+}
+else if (Cargando)
+{
+    <p class="vacio">Cargando…</p>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public bool Cargando { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    [Parameter] public EventCallback AlReintentar { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
