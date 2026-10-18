@@ -35,6 +35,25 @@
     <ProjectReference Include="..\PontePilas.UI\PontePilas.UI.csproj" />
   </ItemGroup>
 
+  <!-- Push en Android: Firebase Cloud Messaging. Se activa al poner google-services.json en Platforms/Android (no se sube a Git). -->
+  <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
+    <PackageReference Include="Xamarin.Firebase.Messaging" Version="125.1.3" />
+    <!-- Firebase trae AndroidX Fragment nuevo y MAUI el Ktx viejo: se alinean para evitar clases duplicadas (FragmentKt). -->
+    <PackageReference Include="Xamarin.AndroidX.Fragment" Version="1.9.0" />
+    <PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.Contains('-android')) And Exists('Platforms\Android\google-services.json')">
+    <GoogleServicesJson Include="Platforms\Android\google-services.json" />
+  </ItemGroup>
+  <PropertyGroup Condition="Exists('Platforms\Android\google-services.json')">
+    <DefineConstants>$(DefineConstants);FIREBASE_CONFIGURADO</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Push en iOS: APNs. Requiere una cuenta de Apple Developer con la capacidad Push; activar con -p:HabilitarPush=true. -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) And '$(HabilitarPush)' == 'true'">
+    <CodesignEntitlements>Platforms\iOS\Entitlements.Push.plist</CodesignEntitlements>
+  </PropertyGroup>
+
   <!-- URL de la API fijada al compilar: -p:ApiUrl=http://IP-DE-TU-MAC:5080/ -->
   <ItemGroup Condition="'$(ApiUrl)' != ''">
     <AssemblyMetadata Include="ApiUrl" Value="$(ApiUrl)" />

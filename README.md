@@ -40,6 +40,12 @@ Requisitos: Xcode instalado y abierto una vez, `dotnet workload install maui-ios
 
 Para el simulador basta con: `dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -t:Run`.
 
+### Notificaciones push
+
+- **Android (Firebase):** crea un proyecto en https://console.firebase.google.com, agrega una app Android con el paquete `com.pontepilas.app` y descarga `google-services.json` a `src/PontePilas.App/Platforms/Android/`. No se sube a Git. Sin ese archivo la app compila y funciona, pero no recibe push.
+- **iOS (APNs):** necesita Apple Developer ($99/año) con la capacidad *Push Notifications* en el App ID. Compila con `-p:HabilitarPush=true`. Con un Apple ID gratis no hay push en iOS.
+- La app pide permiso al abrir y registra el token en la API (`POST /api/dispositivos`). Las llaves para enviar (cuenta de servicio de Firebase y llave .p8 de Apple) van en la API.
+
 ## Accesos
 
 | Qué | Enlace | Se actualiza |

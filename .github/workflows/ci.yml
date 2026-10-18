@@ -45,6 +45,14 @@ jobs:
           java-version: 17
       - name: Instalar workload de MAUI Android
         run: dotnet workload install maui-android
+      - name: google-services.json de prueba (para compilar también la parte de Firebase)
+        run: |
+          cat > src/PontePilas.App/Platforms/Android/google-services.json <<'JSON'
+          {"project_info":{"project_number":"000000000000","project_id":"ponte-pilas-ci","storage_bucket":"ponte-pilas-ci.appspot.com"},
+           "client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"com.pontepilas.app"}},
+                      "api_key":[{"current_key":"AIzaSyD-ci-solo-para-compilar-no-es-real0"}]}],
+           "configuration_version":"1"}
+          JSON
       - name: Build APK
         run: |
           set -o pipefail

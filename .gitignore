@@ -40,3 +40,7 @@ tests/visual/node_modules/
 tests/visual/package*.json
 capturas/
 publicado/
+
+# Configuración de Firebase (se agrega en local o en CI)
+src/PontePilas.App/Platforms/Android/google-services.json
+src/PontePilas.App/Platforms/iOS/GoogleService-Info.plist
