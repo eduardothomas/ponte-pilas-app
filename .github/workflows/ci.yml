@@ -73,15 +73,31 @@ jobs:
       - name: Instalar workload de MAUI iOS compatible con el Xcode del runner
         # El workload más nuevo pide Xcode 27; los runners traen 26.x. Se elige el último conjunto de workloads con SDK de iOS 26.
         run: |
-          set -o pipefail
-          ELEGIDA=""
-          for v in $(dotnet workload search version --take 30 2>/dev/null | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?' ); do
-            ios=$(dotnet workload search version "$v" 2>/dev/null | grep -i "microsoft.net.sdk.ios" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-            echo "$v -> iOS $ios"
-            case "$ios" in 26.*) ELEGIDA=$v; break;; esac
-          done
+          dotnet workload search version --take 40 --format json > versiones.json 2>&1 || true
+          echo "::notice::versiones: $(head -c 400 versiones.json | tr '\n' ' ')"
+          ELEGIDA=$(python3 - <<'PY'
+          import json, re, subprocess
+          texto = open("versiones.json").read()
+          try:
+              datos = json.loads(texto)
+          except Exception:
+              datos = re.findall(r"\d+\.\d+\.\d+(?:\.\d+)?", texto)
+          if isinstance(datos, dict):
+              datos = next((v for v in datos.values() if isinstance(v, list)), [])
+          versiones = [d if isinstance(d, str) else d.get("workloadVersion") or d.get("version") for d in datos]
+          for v in versiones:
+              if not v:
+                  continue
+              salida = subprocess.run(["dotnet", "workload", "search", "version", v, "--format", "json"], capture_output=True, text=True).stdout
+              m = re.search(r'"microsoft\.net\.sdk\.ios"\s*:\s*"?(\d+)\.', salida, re.I) or re.search(r'microsoft\.net\.sdk\.ios\D+(\d+)\.', salida, re.I)
+              print(f"{v} -> iOS {m.group(1) if m else '?'}", flush=True, file=__import__('sys').stderr)
+              if m and m.group(1) == "26":
+                  print(v)
+                  break
+          PY
+          )
           if [ -n "$ELEGIDA" ]; then
-            echo "::notice::Workloads $ELEGIDA (SDK iOS 26) para Xcode $(xcodebuild -version | head -1)"
+            echo "::notice::Workloads $ELEGIDA (SDK iOS 26)"
             dotnet workload install maui-ios --version "$ELEGIDA"
           else
             echo "::warning::No se encontró un conjunto de workloads con iOS 26; se instala el último"
