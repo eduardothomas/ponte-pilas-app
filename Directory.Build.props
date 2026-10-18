@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Authors>Eduardo Thomas</Authors>
+    <Company>Ponte Pilas</Company>
+    <Copyright>Copyright (c) 2026 Eduardo Thomas</Copyright>
+  </PropertyGroup>
+</Project>

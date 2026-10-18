@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Contratos (DTOs) y lógica de cliente compartida entre la app, la web y la API privada. Sin dependencias externas. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PontePilas.Shared</RootNamespace>
+  </PropertyGroup>
+
+</Project>
