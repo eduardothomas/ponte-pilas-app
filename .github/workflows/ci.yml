@@ -4,16 +4,159 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  pruebas-y-build:
+  pruebas-y-web:
+    name: Pruebas y build web
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - run: dotnet restore PontePilas.slnx
-      - run: dotnet build PontePilas.slnx --no-restore -c Release
-      - run: dotnet test PontePilas.slnx --no-build -c Release --logger "console;verbosity=normal"
+      - name: Pruebas
+        run: dotnet test tests/PontePilas.Shared.Tests -c Release --logger "console;verbosity=normal"
+      - name: Publicar web
+        run: dotnet publish src/PontePilas.Web -c Release -o publicado/web
+      - uses: actions/upload-artifact@v5
+        with:
+          name: web
+          path: publicado/web/wwwroot
+          retention-days: 7
+
+  android:
+    name: Build Android (APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: microsoft
+          java-version: 17
+      - name: Instalar workload de MAUI Android
+        run: dotnet workload install maui-android
+      - name: Build APK
+        run: |
+          set -o pipefail
+          dotnet publish src/PontePilas.App -p:Plataforma=android -f net10.0-android -c Release \
+            -p:AndroidPackageFormats=apk -p:AndroidKeyStore=false -o publicado/android 2>&1 | tee build.log \
+            || { grep -E "error|Error|defined multiple|Duplicate" build.log | grep -vE "^\s*at |\sat (com|java|kotlin)\.|\.\.\. [0-9]+ more" | awk '!v[$0]++' | head -25 | sed 's/^/::error::/'; exit 1; }
+      - uses: actions/upload-artifact@v5
+        with:
+          name: android-apk
+          path: publicado/android/*.apk
+          retention-days: 14
+
+  ios:
+    name: Build iOS (simulador)
+    # Repo público: los minutos de macOS son gratis, pero el job es lento. Corre en PR, en main y a mano.
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Instalar workload de MAUI iOS compatible con el Xcode del runner
+        # El workload más nuevo pide Xcode 27; los runners traen 26.x. Se elige el último conjunto de workloads con SDK de iOS 26.
+        run: |
+          dotnet workload search version --take 40 --format json > versiones.json 2>&1 || true
+          echo "::notice::versiones: $(head -c 400 versiones.json | tr '\n' ' ')"
+          ELEGIDA=$(python3 - <<'PY'
+          import json, re, subprocess
+          texto = open("versiones.json").read()
+          try:
+              datos = json.loads(texto)
+          except Exception:
+              datos = re.findall(r"\d+\.\d+\.\d+(?:\.\d+)?", texto)
+          if isinstance(datos, dict):
+              datos = next((v for v in datos.values() if isinstance(v, list)), [])
+          versiones = [d if isinstance(d, str) else d.get("workloadVersion") or d.get("version") for d in datos]
+          for v in versiones:
+              if not v:
+                  continue
+              salida = subprocess.run(["dotnet", "workload", "search", "version", v, "--format", "json"], capture_output=True, text=True).stdout
+              m = re.search(r'"microsoft\.net\.sdk\.ios"\s*:\s*"?(\d+)\.', salida, re.I) or re.search(r'microsoft\.net\.sdk\.ios\D+(\d+)\.', salida, re.I)
+              print(f"{v} -> iOS {m.group(1) if m else '?'}", flush=True, file=__import__('sys').stderr)
+              if m and m.group(1) == "26":
+                  print(v)
+                  break
+          PY
+          )
+          if [ -n "$ELEGIDA" ]; then
+            echo "::notice::Workloads $ELEGIDA (SDK iOS 26)"
+            dotnet workload install maui-ios --version "$ELEGIDA"
+          else
+            echo "::warning::No se encontró un conjunto de workloads con iOS 26; se instala el último"
+            dotnet workload install maui-ios
+          fi
+      - name: Build para simulador
+        run: |
+          set -o pipefail
+          echo "::notice::Xcode instalados: $(ls /Applications | grep -i '^Xcode' | tr '\n' ' ')"
+          echo "::notice::$(xcodebuild -version | tr '\n' ' ')"
+          dotnet build src/PontePilas.App -p:Plataforma=ios -f net10.0-ios -c Debug -p:RuntimeIdentifier=iossimulator-arm64 2>&1 | tee build.log \
+            || { grep -E "error|Xcode" build.log | grep -vE "^\s*at " | awk '!v[$0]++' | head -25 | sed 's/^/::error::/'; exit 1; }
+
+  capturas:
+    name: Capturas visuales (escritorio y móvil)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: pruebas-y-web
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Publicar web
+        run: dotnet publish src/PontePilas.Web -c Release -o publicado/web
+      - name: Instalar Playwright
+        working-directory: tests/visual
+        run: |
+          npm init -y > /dev/null
+          npm install playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Tomar capturas
+        working-directory: tests/visual
+        run: |
+          python3 servidor.py ../../publicado/web/wwwroot &
+          for i in $(seq 1 30); do curl -sf http://localhost:5173 > /dev/null && break; sleep 1; done
+          node capturas.mjs ../../capturas
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: capturas
+          path: capturas
+          retention-days: 14
+      - name: Publicar capturas en la rama "capturas"
+        # Permite revisar las capturas desde git (por ejemplo, desde sesiones sin acceso a artefactos).
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          RAMA_PR: ${{ github.head_ref }}
+        run: |
+          cd capturas
+          git init -q -b capturas
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          printf '# Capturas de %s\n\nCommit %s\n' "$RAMA_PR" "$GITHUB_SHA" > README.md
+          git add -A
+          git commit -q -m "Capturas de $RAMA_PR ($GITHUB_SHA)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" capturas

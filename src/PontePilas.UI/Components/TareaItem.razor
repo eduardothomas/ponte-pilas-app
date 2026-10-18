@@ -1,0 +1,47 @@
+<li class="pp-tarea prioridad-@Tarea.Prioridad.ToString().ToLowerInvariant() @(Tarea.Completada ? "hecha" : "")">
+    <button class="pp-check" type="button" disabled="@Ocupado"
+            aria-label="@(Tarea.Completada ? "Marcar como pendiente" : "Marcar como hecha")"
+            @onclick="() => AlCambiarEstado.InvokeAsync(Tarea)">
+        @if (Tarea.Completada)
+        {
+            <span aria-hidden="true">✓</span>
+        }
+    </button>
+    <a class="pp-tarea-cuerpo" href="tarea/@Tarea.Id">
+        <span class="pp-titulo">@Tarea.Titulo</span>
+        <span class="pp-meta">
+            @if (MostrarFecha && Tarea.Fecha is { } fecha)
+            {
+                <span>@Formato.FechaCorta(fecha, Hoy)</span>
+            }
+            @if (Tarea.Hora is { } hora)
+            {
+                <span>@Formato.Hora(hora)</span>
+            }
+            @if (Tarea.Repeticion != Repeticion.Ninguna)
+            {
+                <span title="@Formato.Repeticion(Tarea.Repeticion)">↻ @Formato.Repeticion(Tarea.Repeticion)</span>
+            }
+            @if (Tarea.AvisosMinutosAntes.Count > 0)
+            {
+                <span title="Tiene recordatorio">🔔</span>
+            }
+            @if (Tarea.Prioridad >= Prioridad.Alta)
+            {
+                <span class="pp-chip">@Formato.Prioridad(Tarea.Prioridad)</span>
+            }
+        </span>
+    </a>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public TareaDto Tarea { get; set; } = default!;
+
+    [Parameter] public DateOnly Hoy { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+
+    [Parameter] public bool MostrarFecha { get; set; } = true;
+
+    [Parameter] public bool Ocupado { get; set; }
+
+    [Parameter] public EventCallback<TareaDto> AlCambiarEstado { get; set; }
+}

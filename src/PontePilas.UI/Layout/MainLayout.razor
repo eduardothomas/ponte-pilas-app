@@ -1,0 +1,35 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Nav
+
+<div class="pp-app">
+    <header class="pp-barra">
+        <a class="pp-marca" href="">
+            <span class="pp-pila" aria-hidden="true"><span></span></span>
+            Ponte Pilas
+        </a>
+        <nav class="pp-nav">
+            <NavLink href="" Match="NavLinkMatch.All">Hoy</NavLink>
+            <NavLink href="calendario">Calendario</NavLink>
+        </nav>
+    </header>
+
+    <main class="pp-contenido">
+        @Body
+    </main>
+
+    @if (!EnEditor)
+    {
+        <a class="pp-fab" href="tarea/nueva" aria-label="Nueva tarea">+</a>
+    }
+</div>
+
+@code {
+    private bool EnEditor => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("tarea", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized() => Nav.LocationChanged += AlNavegar;
+
+    private void AlNavegar(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Nav.LocationChanged -= AlNavegar;
+}

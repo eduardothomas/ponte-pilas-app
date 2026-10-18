@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- App móvil (.NET MAUI Blazor Hybrid) para Android e iOS. Reutiliza la UI de PontePilas.UI. -->
+  <PropertyGroup>
+    <!-- iOS solo se compila en macOS. Para una sola plataforma: -p:Plataforma=android o -p:Plataforma=ios -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks Condition="'$(Plataforma)' != ''">net10.0-$(Plataforma)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PontePilas.App</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <EnableDefaultCssItems>false</EnableDefaultCssItems>
+
+    <ApplicationTitle>Ponte Pilas</ApplicationTitle>
+    <ApplicationId>com.pontepilas.app</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1D1B18" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1D1B18" BaseSize="128,128" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PontePilas.UI\PontePilas.UI.csproj" />
+  </ItemGroup>
+
+  <!-- URL de la API fijada al compilar: -p:ApiUrl=http://IP-DE-TU-MAC:5080/ -->
+  <ItemGroup Condition="'$(ApiUrl)' != ''">
+    <AssemblyMetadata Include="ApiUrl" Value="$(ApiUrl)" />
+  </ItemGroup>
+
+</Project>

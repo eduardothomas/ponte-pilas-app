@@ -34,3 +34,9 @@ TestResults/
 *.aab
 *.ipa
 appsettings.Development.json
+
+# Capturas visuales
+tests/visual/node_modules/
+tests/visual/package*.json
+capturas/
+publicado/

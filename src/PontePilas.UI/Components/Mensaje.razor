@@ -1,0 +1,10 @@
+@if (Errores.TryGetValue(Campo, out var mensaje))
+{
+    <span class="pp-mensaje" role="alert">@mensaje</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Campo { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, string> Errores { get; set; } = new Dictionary<string, string>();
+}
